@@ -1,58 +1,67 @@
 #!/bin/bash
 
-echo "🌀 Starting Zsh + Oh My Zsh + Powerlevel10k setup..."
+# ========================
+# Zema's Ultimate ZSH Setup Script
+# ========================
 
-# Step 1: Install zsh if not already installed
-if ! command -v zsh &> /dev/null; then
-    echo "📦 Installing zsh..."
-    sudo pacman -Sy --noconfirm zsh
-else
-    echo "✅ zsh is already installed."
+set -e
+
+USER_HOME="/home/$USER"
+ZSH_CUSTOM="$USER_HOME/.oh-my-zsh/custom"
+
+echo "🔧 Installing required packages..."
+sudo pacman -Sy --noconfirm zsh fzf git curl
+
+echo "📦 Installing Oh My Zsh..."
+if [ ! -d "$USER_HOME/.oh-my-zsh" ]; then
+  RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
-# Step 2: Install Oh My Zsh
-if [ ! -d "$HOME/.oh-my-zsh" ]; then
-    echo "✨ Installing Oh My Zsh..."
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-else
-    echo "✅ Oh My Zsh is already installed."
-fi
+echo "⚡ Installing plugins..."
 
-# Step 3: Install Powerlevel10k theme
-if [ ! -d "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k" ]; then
-    echo "🎨 Installing Powerlevel10k theme..."
-    git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
-        "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
-else
-    echo "✅ Powerlevel10k is already installed."
-fi
+# Autosuggestions
+git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
 
-# Step 4: Set Powerlevel10k as the default theme
-echo "🛠️ Setting Powerlevel10k as the default theme..."
+# Syntax Highlighting
+git clone https://github.com/zsh-users/zsh-syntax-highlighting "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
 
-ZSHRC="$HOME/.zshrc"
+# fzf-tab
+git clone https://github.com/Aloxaf/fzf-tab "$ZSH_CUSTOM/plugins/fzf-tab"
 
-if grep -q '^ZSH_THEME=' "$ZSHRC"; then
-    sed -i 's/^ZSH_THEME=.*/ZSH_THEME="powerlevel10k\/powerlevel10k"/' "$ZSHRC"
-else
-    echo 'ZSH_THEME="powerlevel10k/powerlevel10k"' >> "$ZSHRC"
-fi
+# fast directory jumping
+# (z is already included with Oh My Zsh)
 
-# Step 5: Set Zsh as default shell (optional)
-if [ "$SHELL" != "/bin/zsh" ]; then
-    echo "🔄 Changing default shell to Zsh..."
-    chsh -s /bin/zsh
-fi
+echo "🎨 Installing Powerlevel10k theme..."
+git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$ZSH_CUSTOM/themes/powerlevel10k"
 
-# Final message
-echo ""
-echo "✅ Zsh setup is complete!"
-echo ""
-echo "👉 What to do next:"
-echo "1. Close this terminal and open a new one."
-echo "2. You will be prompted to configure Powerlevel10k the first time."
-echo "3. Choose the style and options you like."
-echo "4. To reconfigure later, just run: p10k configure"
-echo ""
-echo "💡 Tip: For best appearance, install the 'MesloLGS NF' font:"
-echo "   https://github.com/romkatv/powerlevel10k#manual-font-installation"
+echo "🧠 Updating .zshrc..."
+
+# Backup old .zshrc
+cp "$USER_HOME/.zshrc" "$USER_HOME/.zshrc.backup.$(date +%s)"
+
+# Overwrite with new config
+cat > "$USER_HOME/.zshrc" <<EOF
+export ZSH="$USER_HOME/.oh-my-zsh"
+ZSH_THEME="powerlevel10k/powerlevel10k"
+
+plugins=(
+  git
+  z
+  zsh-autosuggestions
+  zsh-syntax-highlighting
+  fzf-tab
+)
+
+source \$ZSH/oh-my-zsh.sh
+
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+EOF
+
+# Ensure ownership
+chown "$USER:$USER" "$USER_HOME/.zshrc"
+
+echo "✅ Changing default shell to zsh..."
+sudo chsh -s "$(which zsh)" "$USER"
+
+echo "🎉 Done! Restart terminal and enjoy zsh 🚀"
+echo "🔔 First time you open terminal, Powerlevel10k will ask you to configure it."
